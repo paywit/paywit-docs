@@ -1,0 +1,5 @@
+/* Inline code inside table cells never wraps mid-token; the column grows instead. */
+table td code,
+table th code {
+  white-space: nowrap;
+}

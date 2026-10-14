@@ -1,0 +1,84 @@
+---
+title: "JavaScript"
+description: "Pay button and API client for the browser."
+---
+
+Two packages, both on npm under the `@paywit` org:
+
+| Package | What it is |
+| --- | --- |
+| [`@paywit/js`](https://www.npmjs.com/package/@paywit/js) | A `<paywit-button>` web component that creates a payment and opens the checkout. Bundles the SDK, zero dependencies. |
+| [`@paywit/sdk`](https://www.npmjs.com/package/@paywit/sdk) | The client underneath. Create and read payments from the browser or Node. ESM, CJS and TypeScript types. |
+
+Both use the **publishable key** and so set the amount client-side. That is fine for a storefront. If the amount decides what you deliver, create the payment on your server with the secret key instead and only hand the checkout URL to the browser.
+
+## The button
+
+```html
+<script src="https://unpkg.com/@paywit/js@0.1.0"></script>
+
+<paywit-button
+  publishable-key="pk_live_..."
+  api-base-url="https://api.sandbox.paywit.xyz"
+  amount="10"
+  description="Order #1234"
+  client-reference-id="order_1234"
+  label="Pay 10 USDC"
+></paywit-button>
+```
+
+Clicking creates the payment and opens the hosted checkout in a new tab.
+
+| Attribute | Required | Description |
+| --- | --- | --- |
+| `publishable-key` | yes | Your `pk_...` key. |
+| `amount` | yes | USDC, more than 0. |
+| `api-base-url` | no | Point at sandbox. Defaults to production. |
+| `description` | no | Shown on the checkout. |
+| `client-reference-id` | no | Your order id, echoed in webhooks. |
+| `return-url` | no | Where the checkout returns after paying. |
+| `label` | no | Button text. Defaults to "Pay with Paywit". |
+| `disabled` | no | Disables the button. |
+
+Events:
+
+```js
+const btn = document.querySelector("paywit-button");
+btn.addEventListener("paywit-success", (e) => console.log(e.detail.paymentCheckoutUrl));
+btn.addEventListener("paywit-error", (e) => console.error(e.detail.error));
+```
+
+Theme it with CSS variables on the element, for example `--paywit-button-bg`, `--paywit-button-color` and `--paywit-button-radius`.
+
+You can also turn any element into a button with `data-paywit-*` attributes, or call `attachPaywitButton(selector, options)` from code.
+
+## The client
+
+```bash
+npm install @paywit/sdk
+```
+
+```ts
+import { Paywit, PaywitError } from "@paywit/sdk";
+
+const paywit = new Paywit({
+  publishableKey: "pk_live_...",
+  apiBaseUrl: "https://api.sandbox.paywit.xyz",
+});
+
+const { paymentCheckoutUrl, payment } = await paywit.createPayment({
+  amount: 10,
+  description: "Order #1234",
+  clientReferenceId: "order_1234",
+});
+
+paywit.openCheckout(paymentCheckoutUrl);
+
+const latest = await paywit.getPayment(payment.id);
+```
+
+Any non-2xx response throws a `PaywitError` with `status`, `message` and `body`.
+
+<Note>
+Pin a version and add Subresource Integrity when loading from a CDN in production.
+</Note>

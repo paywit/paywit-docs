@@ -1,0 +1,34 @@
+---
+title: "Payment statuses"
+description: "What each status means and what your system should do."
+---
+
+Only `Paid` means the money is yours. Everything else is either still in progress or a reason not to fulfil.
+
+| Status | Meaning | What to do |
+| --- | --- | --- |
+| `Created` | The payment exists. The customer has not opened a wallet yet. | Nothing. |
+| `Pending` | The customer picked a wallet. Paywit is waiting for the funds. | Nothing. |
+| `Bridging` | The customer paid on another chain and the funds are crossing to your wallet. Never expires. | Nothing. Keep waiting. |
+| `Paid` | USDC arrived in your settlement wallet. Final. | Fulfil the order. You also get `payment.paid`. |
+| `Expired` | The window closed before funds arrived. | Mark the order unpaid. You also get `payment.expired`. |
+| `Failed` | Funds arrived but did not match the request. | Do not fulfil. You also get `payment.failed`. Contact support if it repeats. |
+| `DestinationMismatch` | Funds went to a different account than the one requested. | Treat as failed. |
+| `AssetMismatch` | A different asset arrived. | Treat as failed. |
+| `AmountMismatch` | A different amount arrived. | Treat as failed. |
+
+Treat the list as open and ignore values you do not recognise.
+
+## Reading the status
+
+Webhooks tell you about the final states. For the in-between ones, for example to show the customer a "waiting for your wallet" screen when they come back to your site, fetch the payment:
+
+```bash
+curl https://api.sandbox.paywit.xyz/v1/payments/{paymentId}
+```
+
+No key is needed. The response deliberately leaves out merchant data such as your app id and client reference id, so it is safe to call from a browser.
+
+<Warning>
+Do not fulfil orders from this call. Use the `payment.paid` webhook, which is signed and retried.
+</Warning>

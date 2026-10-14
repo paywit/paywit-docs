@@ -1,0 +1,441 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Paywit API",
+    "version": "1.0",
+    "description": "Create payments, send buyers to the hosted checkout, and receive a signed webhook when they pay."
+  },
+  "servers": [
+    {
+      "url": "https://api.sandbox.paywit.xyz",
+      "description": "Sandbox (Stellar testnet, no real money)"
+    }
+  ],
+  "security": [
+    {
+      "SecretKey": []
+    },
+    {
+      "PublishableKey": []
+    }
+  ],
+  "paths": {
+    "/v1/payments": {
+      "post": {
+        "summary": "Create a payment",
+        "operationId": "createPayment",
+        "description": "Creates a payment and returns the hosted checkout URL to send the buyer to. Call this from your server with your secret key so the amount is fixed server-side. The publishable key is also accepted, for client-side use through the JavaScript SDK.",
+        "security": [
+          {
+            "SecretKey": []
+          },
+          {
+            "PublishableKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentRequest"
+              },
+              "example": {
+                "amount": 5.43,
+                "description": "Order #18421",
+                "clientReferenceId": "order_18421",
+                "returnUrl": "https://shop.example/orders/18421"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePaymentResponse"
+                },
+                "example": {
+                  "paymentCheckoutUrl": "https://checkout.sandbox.paywit.xyz/checkout/0f4c1e2a-7b3d-4e5f-9a6b-1c2d3e4f5a6b",
+                  "payment": {
+                    "id": "0f4c1e2a-7b3d-4e5f-9a6b-1c2d3e4f5a6b",
+                    "createdAt": "2026-10-14T09:29:07.335Z",
+                    "amount": 5.43,
+                    "status": "Created",
+                    "description": "Order #18421",
+                    "returnUrl": "https://shop.example/orders/18421",
+                    "expiresAt": "2026-10-14T10:29:07.335Z",
+                    "bridgeStatus": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed or invalid request, for example a non-positive amount or a returnUrl that is not http(s). The body says which field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or revoked API key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/v1/payments/{paymentId}": {
+      "get": {
+        "summary": "Get a payment",
+        "operationId": "getPayment",
+        "description": "Returns the current state of a payment. No authentication is required, and the response deliberately excludes merchant data such as your app id and client reference id. Use it to show the buyer where their payment is. Use webhooks, not this call, to release goods.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The payment id returned when the payment was created."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The payment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPaymentResponse"
+                },
+                "example": {
+                  "payment": {
+                    "id": "0f4c1e2a-7b3d-4e5f-9a6b-1c2d3e4f5a6b",
+                    "createdAt": "2026-10-14T09:29:07.335Z",
+                    "amount": 5.43,
+                    "status": "Paid",
+                    "description": "Order #18421",
+                    "returnUrl": "https://shop.example/orders/18421",
+                    "expiresAt": "2026-10-14T10:29:07.335Z",
+                    "bridgeStatus": null
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No payment with that id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Payments"
+        ]
+      }
+    }
+  },
+  "webhooks": {
+    "payment.paid": {
+      "post": {
+        "summary": "Payment webhook",
+        "operationId": "webhookPaymentPaid",
+        "description": "Sent to your webhook URL when a payment reaches a final state. The same envelope is used for `payment.paid`, `payment.failed` and `payment.expired`; the `type` field and the `Paywit-Event-Type` header tell them apart. Delivery is at-least-once with retries, so deduplicate on `id`. Verify the `Paywit-Signature` header before trusting the body. See the webhooks guide.",
+        "parameters": [
+          {
+            "name": "Paywit-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "`t=<unix seconds>,v1=<hex HMAC-SHA256 of \"<t>.<raw body>\" keyed with your whsec_ secret>`"
+          },
+          {
+            "name": "Paywit-Event-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Unique event id. Same value as `id` in the body."
+          },
+          {
+            "name": "Paywit-Event-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "payment.paid",
+                "payment.failed",
+                "payment.expired"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              },
+              "example": {
+                "id": "8e2d6a1f-3c4b-4d5e-8f9a-0b1c2d3e4f5a",
+                "type": "payment.paid",
+                "createdAt": "2026-10-14T09:31:40.120Z",
+                "data": {
+                  "paymentId": "0f4c1e2a-7b3d-4e5f-9a6b-1c2d3e4f5a6b",
+                  "appId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d",
+                  "amount": 5.43,
+                  "assetIdentifier": "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+                  "status": "Paid",
+                  "transactionHash": "7d3f9c1b4a2e8f6d0c5b9a7e3d1f2c4b6a8e0d9f7c5b3a1e2d4f6c8b0a9e7d3f",
+                  "clientReferenceId": "order_18421"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Return any 2xx within 10 seconds to acknowledge. Anything else, or a timeout, is retried up to 6 times over about a day."
+          }
+        },
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SecretKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Paywit-Secret-Key",
+        "description": "Server-to-server key, `sk_live_...`. Generate it in the dashboard under your app. Never ship it to a browser or mobile app."
+      },
+      "PublishableKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Paywit-Publishable-Key",
+        "description": "Client-side key, `pk_live_...`. Safe to embed in a web page. Can only create payments."
+      }
+    },
+    "schemas": {
+      "CreatePaymentRequest": {
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Amount in USDC.",
+            "example": 5.43
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Shown to the buyer on the checkout.",
+            "example": "Order #18421"
+          },
+          "clientReferenceId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Your own order or invoice id. Echoed back in webhooks so you can match the payment to your records.",
+            "example": "order_18421"
+          },
+          "returnUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "Where the checkout sends the buyer after paying. Must be http or https.",
+            "example": "https://shop.example/orders/18421"
+          }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount in USDC."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Created",
+              "Pending",
+              "Bridging",
+              "Paid",
+              "Expired",
+              "Failed",
+              "DestinationMismatch",
+              "AssetMismatch",
+              "AmountMismatch"
+            ],
+            "description": "Treat as an open set and ignore values you do not recognise. See the payment statuses guide."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "returnUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "After this time the payment moves to Expired. Bridging payments never expire."
+          },
+          "bridgeStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cross-chain progress, for example `AwaitingPayment` or `Bridging`. Null for same-chain payments."
+          }
+        }
+      },
+      "CreatePaymentResponse": {
+        "type": "object",
+        "properties": {
+          "paymentCheckoutUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Send the buyer here."
+          },
+          "payment": {
+            "$ref": "#/components/schemas/Payment"
+          }
+        }
+      },
+      "GetPaymentResponse": {
+        "type": "object",
+        "properties": {
+          "payment": {
+            "$ref": "#/components/schemas/Payment"
+          }
+        }
+      },
+      "WebhookEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique event id. Deduplicate on this."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "payment.paid",
+              "payment.failed",
+              "payment.expired"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "paymentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "appId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "amount": {
+                "type": "number",
+                "description": "Amount in USDC."
+              },
+              "assetIdentifier": {
+                "type": "string",
+                "description": "`CODE:ISSUER` of the settled asset."
+              },
+              "status": {
+                "type": "string",
+                "description": "Final payment status."
+              },
+              "transactionHash": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "On-chain transaction hash. Present for payment.paid, null otherwise."
+              },
+              "clientReferenceId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The value you passed when creating the payment."
+              }
+            }
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer"
+          },
+          "body": {
+            "description": "A message or a validation-problem object describing what went wrong."
+          }
+        }
+      }
+    }
+  }
+}

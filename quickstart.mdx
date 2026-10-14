@@ -1,47 +1,108 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Create a payment, pay it from a test wallet, and receive the webhook."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+## 1. Set up your account
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+Sign in to the [sandbox dashboard](https://dashboard.sandbox.paywit.xyz) with your email. You get a one-time code, there is no password.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
-
-    ```bash
-    npm install your-package
-    ```
+  <Step title="Create an app">
+    Under **Apps**, create one for your product. Keys and webhooks belong to an app.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
-
-    ```bash
-    your-cli init
-    ```
+  <Step title="Add and verify a settlement wallet">
+    Under **Wallets**, add the Stellar public key (`G...`) that should receive USDC. The account must be funded and hold a trustline to testnet USDC. Click **Validate** and pay the small verification amount from that wallet to prove you own it.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
-
-    ```bash
-    your-cli start
-    ```
+  <Step title="Link the wallet to your app">
+    On the app page, set the settlement wallet. Payments on this app now settle there.
+  </Step>
+  <Step title="Generate a secret key">
+    On the app page, under **Secret keys**, generate one. It is shown once. It looks like `sk_live_...`.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+<Warning>
+The secret key is for your server only. Never put it in a web page or mobile app. If you need to create payments from the browser, use the publishable key with the [JavaScript SDK](/sdks/javascript).
+</Warning>
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+## 2. Create a payment
+
+```bash
+curl https://api.sandbox.paywit.xyz/v1/payments \
+  -H "X-Paywit-Secret-Key: sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1,
+    "description": "Test order",
+    "clientReferenceId": "order_1"
+  }'
+```
+
+The response is the payment and the checkout URL:
+
+```json
+{
+  "paymentCheckoutUrl": "https://checkout.sandbox.paywit.xyz/checkout/0f4c1e2a-...",
+  "payment": {
+    "id": "0f4c1e2a-7b3d-4e5f-9a6b-1c2d3e4f5a6b",
+    "amount": 1,
+    "status": "Created",
+    "expiresAt": "2026-10-14T10:29:07+00:00",
+    "description": "Test order",
+    "returnUrl": null,
+    "createdAt": "2026-10-14T09:29:07+00:00",
+    "bridgeStatus": null
+  }
+}
+```
+
+Store `payment.id` against your order. `clientReferenceId` is your own id and comes back in the webhook.
+
+## 3. Pay it
+
+Open `paymentCheckoutUrl` in a browser. Pick a wallet, approve the payment, and watch the page flip to **Paid**.
+
+You need a wallet with testnet USDC for this. The [testing guide](/guides/test-on-sandbox) shows how to get one in a few minutes.
+
+## 4. Receive the webhook
+
+On the app page, under **Webhook**, set the URL Paywit should call. For a first look, use a request catcher such as [webhook.site](https://webhook.site). Saving the URL returns a signing secret, `whsec_...`, shown once.
+
+Pay another payment and the event arrives:
+
+```json
+{
+  "id": "8e2d6a1f-...",
+  "type": "payment.paid",
+  "createdAt": "2026-10-14T09:31:40+00:00",
+  "data": {
+    "paymentId": "0f4c1e2a-...",
+    "appId": "...",
+    "amount": 1,
+    "assetIdentifier": "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "status": "Paid",
+    "transactionHash": "<64-char hex transaction hash>",
+    "clientReferenceId": "order_1"
+  }
+}
+```
+
+In production your endpoint verifies the `Paywit-Signature` header, deduplicates on `id`, and fulfils the order on `payment.paid`. The [webhooks guide](/guides/webhooks) has the details and the verification code.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Hosted checkout" icon="cart-shopping" href="/guides/hosted-checkout">
+    What your customer sees, return URLs and expiry.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Verify signatures and handle retries.
+  </Card>
+  <Card title="Payment statuses" icon="list-check" href="/guides/payment-statuses">
+    What each status means and what to do.
+  </Card>
+  <Card title="Go live" icon="flag-checkered" href="/guides/go-live">
+    What changes between sandbox and mainnet.
+  </Card>
+</CardGroup>

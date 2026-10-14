@@ -1,0 +1,38 @@
+---
+title: "Introduction"
+description: "What Paywit is and how a payment works."
+---
+
+Paywit is a stablecoin checkout. Your customer pays in USDC from their own wallet to your wallet, and a signed webhook tells your backend when it is paid. Paywit does not hold the funds.
+
+## How a payment works
+
+<Steps>
+  <Step title="Your server creates a payment">
+    One call to the API with the amount and your order id. You get back a hosted checkout URL.
+  </Step>
+  <Step title="The customer pays from their wallet">
+    You send them to the checkout. They pick a wallet, approve the payment, and the USDC moves from their wallet to your settlement wallet.
+  </Step>
+  <Step title="Paywit confirms it on-chain">
+    Paywit marks the payment paid when the funds arrive in your wallet.
+  </Step>
+  <Step title="Your server gets a webhook">
+    A signed `payment.paid` event with your order id. You fulfil the order.
+  </Step>
+</Steps>
+
+The integration is one call out and one webhook in. SDKs are available for [JavaScript](/sdks/javascript) and [Flutter](/sdks/flutter).
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Create and pay a test payment.
+  </Card>
+  <Card title="API reference" icon="book" href="/api-reference/introduction">
+    Every endpoint, request and response.
+  </Card>
+</CardGroup>
+
+<Note>
+Paywit is on sandbox today, on the Stellar testnet with test USDC. See [Go live](/guides/go-live) for what changes on mainnet.
+</Note>

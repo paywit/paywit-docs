@@ -1,0 +1,134 @@
+---
+title: "Webhooks"
+description: "Receive and verify payment events."
+---
+
+When a payment reaches a final state, Paywit POSTs a JSON event to your webhook URL. Fulfil orders from `payment.paid`.
+
+## Set the URL
+
+On your app page in the dashboard, under **Webhook**, save the URL. The response includes a signing secret, `whsec_...`, shown once. Store it next to your secret key. Use an `https` URL.
+
+## Events
+
+| Type | When |
+| --- | --- |
+| `payment.paid` | Funds arrived in your wallet. Fulfil the order. |
+| `payment.failed` | Funds arrived but did not match the request (wrong amount, asset or destination). Do not fulfil. |
+| `payment.expired` | The payment window closed before funds arrived. |
+
+## Delivery
+
+Every delivery carries these headers:
+
+| Header | Value |
+| --- | --- |
+| `Paywit-Signature` | `t=<unix seconds>,v1=<hex HMAC-SHA256>` |
+| `Paywit-Event-Id` | Unique event id, same as `id` in the body |
+| `Paywit-Event-Type` | The event type |
+| `Content-Type` | `application/json` |
+
+And this body:
+
+```json
+{
+  "id": "8e2d6a1f-3c4b-4d5e-8f9a-0b1c2d3e4f5a",
+  "type": "payment.paid",
+  "createdAt": "2026-10-14T09:31:40+00:00",
+  "data": {
+    "paymentId": "0f4c1e2a-7b3d-4e5f-9a6b-1c2d3e4f5a6b",
+    "appId": "5a6b7c8d-...",
+    "amount": 5.43,
+    "assetIdentifier": "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "status": "Paid",
+    "transactionHash": "<64-char hex transaction hash>",
+    "clientReferenceId": "order_18421"
+  }
+}
+```
+
+`transactionHash` is set for `payment.paid` and null otherwise. `clientReferenceId` is whatever you passed when creating the payment.
+
+Return any 2xx within 10 seconds. Anything else, or a timeout, is retried with growing delays: about 30 seconds, 2 minutes, 10 minutes, 1 hour, 6 hours and 24 hours, six attempts in total. Delivery is at-least-once, so the same event can arrive more than once.
+
+## Verify the signature
+
+The signed string is the timestamp, a dot, and the raw request body exactly as received. Compute HMAC-SHA256 with your `whsec_` secret, compare it to `v1` in constant time, and reject timestamps older than a few minutes.
+
+<CodeGroup>
+
+```javascript Node.js
+import crypto from "node:crypto";
+
+export function verifyPaywit(rawBody, signatureHeader, secret) {
+  const parts = Object.fromEntries(
+    signatureHeader.split(",").map((kv) => kv.split("="))
+  );
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${parts.t}.${rawBody}`)
+    .digest("hex");
+  const fresh = Math.abs(Date.now() / 1000 - Number(parts.t)) < 300;
+  return fresh && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1 ?? ""));
+}
+```
+
+```python Python
+import hmac, hashlib, time
+
+def verify_paywit(raw_body: bytes, signature_header: str, secret: str) -> bool:
+    parts = dict(kv.split("=", 1) for kv in signature_header.split(","))
+    signed = f"{parts['t']}.".encode() + raw_body
+    expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    fresh = abs(time.time() - int(parts["t"])) < 300
+    return fresh and hmac.compare_digest(expected, parts.get("v1", ""))
+```
+
+```php PHP
+function verifyPaywit(string $rawBody, string $signatureHeader, string $secret): bool
+{
+    parse_str(str_replace(',', '&', $signatureHeader), $parts);
+    $expected = hash_hmac('sha256', $parts['t'] . '.' . $rawBody, $secret);
+    $fresh = abs(time() - (int) $parts['t']) < 300;
+    return $fresh && hash_equals($expected, $parts['v1'] ?? '');
+}
+```
+
+```csharp C#
+using System.Security.Cryptography;
+using System.Text;
+
+static bool VerifyPaywit(string rawBody, string signatureHeader, string secret)
+{
+    var parts = signatureHeader.Split(',')
+        .Select(kv => kv.Split('=', 2))
+        .ToDictionary(p => p[0], p => p[1]);
+    using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+    var expected = Convert.ToHexString(
+        hmac.ComputeHash(Encoding.UTF8.GetBytes($"{parts["t"]}.{rawBody}"))).ToLowerInvariant();
+    var fresh = Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - long.Parse(parts["t"])) < 300;
+    return fresh && CryptographicOperations.FixedTimeEquals(
+        Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(parts.GetValueOrDefault("v1", "")));
+}
+```
+
+</CodeGroup>
+
+<Warning>
+Read the raw body before any JSON parsing or framework middleware touches it. A re-serialised body will not match the signature.
+</Warning>
+
+## Handle the event
+
+A safe handler does four things, in this order:
+
+1. Verify the signature. Reject with 400 if it fails.
+2. Check `id` against events you have already processed. If seen, return 200 and stop.
+3. Record the `id`, then act on `type`. On `payment.paid`, look up your order by `clientReferenceId` or `paymentId`, check that `data.amount` matches what the order costs, and fulfil it.
+4. Return 200.
+
+If your framework has CSRF protection on POST routes, exclude the webhook route. The request comes from Paywit, not a browser session.
+
+## Test it
+
+Point the webhook URL at [webhook.site](https://webhook.site) to see real payloads before you write the handler, then switch it to your endpoint. The [testing guide](/guides/test-on-sandbox) walks through a full run.

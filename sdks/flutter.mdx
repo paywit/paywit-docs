@@ -1,0 +1,75 @@
+---
+title: "Flutter"
+description: "Open the checkout from an iOS or Android app."
+---
+
+The [`paywit`](https://pub.dev/packages/paywit) package opens the checkout in a Custom Tab on Android or `SFSafariViewController` on iOS, waits for the payment to settle, and returns the result. No URL schemes, no `assetlinks.json`, no manifest edits.
+
+```bash
+flutter pub add paywit
+```
+
+## Recommended: create the payment on your server
+
+Your backend creates the payment with the secret key and returns the checkout URL. The app only opens it, so the amount is fixed server-side.
+
+```dart
+import 'package:paywit/paywit.dart';
+
+final paywit = Paywit(apiBaseUrl: 'https://api.sandbox.paywit.xyz');
+
+final checkoutUrl = await myBackend.startOrder(1234);
+final result = await paywit.checkoutPayment(checkoutUrl: checkoutUrl);
+
+if (result.isPaid) {
+  confirmOrder();
+}
+```
+
+`checkoutPayment` needs no publishable key.
+
+## Quick path: create from the app
+
+For prototypes, or when the amount is not security-sensitive, the app can create the payment itself with the publishable key.
+
+```dart
+final paywit = Paywit(
+  apiBaseUrl: 'https://api.sandbox.paywit.xyz',
+  publishableKey: 'pk_live_...',
+);
+
+final result = await paywit.checkout(
+  amount: 10,
+  description: 'Order #1234',
+  clientReferenceId: 'order_1234',
+);
+```
+
+Or drop in `PaywitButton` with `onResult` and `onError` callbacks.
+
+## Results
+
+An unpaid payment is a result, not an exception:
+
+```dart
+switch (result.status) {
+  case PaymentStatus.paid:     confirmOrder();
+  case PaymentStatus.expired:  showExpired();
+  case PaymentStatus.canceled: break;
+  default:                     showFailure();
+}
+```
+
+<Warning>
+`canceled` means the buyer came back to your app without finishing. They can still pay from their wallet afterwards. Release goods from your webhook, not from this result.
+</Warning>
+
+Cross-chain payments pass through `PaymentStatus.bridging` while funds move between chains. These never expire and the SDK keeps waiting.
+
+## Errors
+
+Faults throw `PaywitException`, a sealed type: `PaywitApiException` (with `statusCode` and `message`), `PaywitNetworkException`, `PaywitConfigException` and `PaywitBrowserException`.
+
+## Platforms
+
+Android SDK 23 and up, iOS 13 and up. Call `paywit.dispose()` when you are done with an instance.

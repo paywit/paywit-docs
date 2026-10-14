@@ -1,33 +1,28 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
+# Paywit docs
 
-# Documentation project instructions
+Documentation site for Paywit, built on Mintlify. Pages are MDX with YAML frontmatter, configuration is `docs.json`, the API reference is generated from `api-reference/openapi.json`.
 
-## About this project
+## What this documents
 
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
-- Configuration lives in `docs.json`
-- Use the Mintlify MCP server, `https://mcp.mintlify.com`, to edit content and settings via MCP
-- Use the Mintlify docs MCP server, `https://www.mintlify.com/docs/mcp`, to query information about using Mintlify via MCP
+- The public merchant API: create payment, get payment, webhooks. Nothing else.
+- The hosted checkout, sandbox testing, going live.
+- The JavaScript and Flutter SDKs.
 
-## Terminology
+## What this must not document
 
-{/* Add product-specific terms and preferred usage */}
-{/* Example: Use "workspace" not "project", "member" not "user" */}
+- Dashboard endpoints (auth, apps, keys, settlement accounts, payment listing).
+- Checkout internals (wallet-link, wallet-submit, Solana Pay routes).
+- Protocol endpoints (Stellar auth, stellar.toml).
 
-## Style preferences
+## Source of truth
 
-{/* Add any project-specific style rules below */}
+- Endpoint shapes come from the API's OpenAPI output. `api-reference/openapi.json` is the public subset; update it when the API changes, never invent fields.
+- Webhook signing: `Paywit-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>`.
+- SDK pages follow the package READMEs in `paywit-js`, `paywit-js-sdk` and `paywit_flutter_sdk`.
 
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
+## Style
 
-## Content boundaries
-
-{/* Define what should and shouldn't be documented */}
-{/* Example: Don't document internal admin features */}
+- Second person, active voice, sentence case headings.
+- Short sentences. Say what to do, then why, in that order.
+- Code for file names, commands and field names. Bold for UI elements.
+- Amounts are USDC. Sandbox URLs unless a page is specifically about mainnet.

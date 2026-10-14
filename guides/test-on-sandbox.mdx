@@ -1,0 +1,49 @@
+---
+title: "Test on sandbox"
+description: "Run a payment end to end on the Stellar testnet."
+---
+
+Sandbox is Paywit on the Stellar testnet. Same API, checkout and webhooks, with test USDC.
+
+| | |
+| --- | --- |
+| API base URL | `https://api.sandbox.paywit.xyz` |
+| Dashboard | `https://dashboard.sandbox.paywit.xyz` |
+| Checkout | `https://checkout.sandbox.paywit.xyz` |
+| Network | Stellar testnet |
+| Keys | Generated in the sandbox dashboard |
+| USDC issuer | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+
+## Get a test wallet with USDC
+
+You need one wallet to play the customer and, if you have not set one up yet, one Stellar account to be your settlement wallet. Both can be the same wallet app on testnet.
+
+<Steps>
+  <Step title="Switch a wallet to testnet">
+    Use a wallet that supports the Stellar testnet and switch it over in its settings. Albedo needs no switch, it picks the network from the payment link.
+  </Step>
+  <Step title="Fund the account">
+    Testnet accounts are funded for free by Friendbot. Most wallets offer a button; otherwise paste the public key at [laboratory.stellar.org](https://laboratory.stellar.org/#account-creator?network=test).
+  </Step>
+  <Step title="Add the USDC trustline">
+    In the wallet, add the asset `USDC` with issuer `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
+  </Step>
+  <Step title="Get test USDC">
+    Request it from [Circle's faucet](https://faucet.circle.com), choosing **Stellar testnet** and pasting your public key.
+  </Step>
+</Steps>
+
+## End-to-end checklist
+
+- [ ] App created, settlement wallet added, verified and linked, secret key generated
+- [ ] Webhook URL saved, `whsec_` secret stored on your server
+- [ ] Create a payment from your backend, response is 201 with a checkout URL
+- [ ] Open the checkout, pay from the test wallet, page shows **Paid**
+- [ ] `payment.paid` arrives at your endpoint, signature verifies, order fulfilled once
+- [ ] Replay the same event body, the order is not fulfilled twice
+- [ ] Let a payment expire, `payment.expired` arrives and the order is marked unpaid
+- [ ] The payment shows in the dashboard with your `clientReferenceId`
+
+## Seeing the transaction
+
+Every paid payment has an on-chain transaction. Paste the `transactionHash` from the webhook into [stellar.expert](https://stellar.expert/explorer/testnet) to see the USDC arriving in your wallet.

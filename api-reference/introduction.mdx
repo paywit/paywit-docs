@@ -1,0 +1,44 @@
+---
+title: "Introduction"
+description: "Base URL, authentication and errors for the Paywit API."
+---
+
+The API is a small REST surface. Create a payment, read a payment, and receive webhooks. Everything else, such as apps, keys and wallets, is managed in the dashboard.
+
+## Base URL
+
+```
+https://api.sandbox.paywit.xyz
+```
+
+Endpoints are versioned in the path, `/v1/...`.
+
+## Authentication
+
+Send one of two header keys. Both are generated per app in the dashboard.
+
+| Header | Key | Use it from |
+| --- | --- | --- |
+| `X-Paywit-Secret-Key` | `sk_live_...` | Your server. Full access to create payments. Never ship it to a client. |
+| `X-Paywit-Publishable-Key` | `pk_live_...` | A web page or app. Can only create payments, and the amount is then set client-side. |
+
+Reading a payment by id needs no key. Webhooks are authenticated the other way round, with a signature you verify. See the [webhooks guide](/guides/webhooks).
+
+## Errors
+
+Non-2xx responses carry a JSON body:
+
+```json
+{ "statusCode": 400, "body": { "errors": { "Amount": ["Amount must be greater than 0."] } } }
+```
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Malformed or invalid request, for example a non-positive amount or an id that is not a UUID. The body says which field. |
+| `401` | Missing, invalid or revoked key. |
+| `404` | No such payment. |
+| `500` | Something broke on our side. Retry with backoff, then tell us. |
+
+## Amounts
+
+Amounts are in USDC, as JSON numbers. Price in USDC or convert from your currency when you create the payment.

@@ -1,0 +1,26 @@
+---
+title: "Go live"
+description: "Move from sandbox to mainnet."
+---
+
+Sandbox and mainnet are separate environments. Apps, keys, wallets and webhook secrets do not carry over, and sandbox payments never appear in production. Your integration code does not change.
+
+| | |
+| --- | --- |
+| API base URL | `https://api.paywit.xyz` |
+| Dashboard | `https://dashboard.paywit.xyz` |
+| Checkout | `https://checkout.paywit.xyz` |
+| Network | Stellar mainnet |
+| Keys | Generated in the production dashboard. Sandbox keys do not work on mainnet |
+| USDC issuer | `GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN` |
+
+## Before you switch
+
+- Keep the base URL, secret key and webhook secret in environment variables, so the switch is a configuration change.
+- Your settlement wallet must hold the mainnet USDC trustline. Add and verify it in the production dashboard the same way as on sandbox.
+- Make sure your webhook endpoint is reachable from the internet over `https`, verifies the signature, deduplicates on the event id and fulfils only on `payment.paid`. The [webhooks guide](/guides/webhooks) covers all four.
+- Make one small real payment end to end before you open it to customers.
+
+## Good to know
+
+There is no refund endpoint. A refund is a USDC transfer from your wallet to the customer's. Keep your sandbox app for testing changes before you ship them. Fees are on [paywit.xyz/pricing](https://paywit.xyz/pricing).
