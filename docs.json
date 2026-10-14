@@ -85,5 +85,11 @@
   "appearance": {
     "default": "system",
     "strict": false
-  }
+  },
+  "redirects": [
+    {
+      "source": "/guides/go-live",
+      "destination": "/introduction"
+    }
+  ]
 }
