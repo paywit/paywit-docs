@@ -28,8 +28,7 @@
           "guides/hosted-checkout",
           "guides/webhooks",
           "guides/payment-statuses",
-          "guides/test-on-sandbox",
-          "guides/go-live"
+          "guides/test-on-sandbox"
         ]
       },
       {
