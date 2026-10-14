@@ -238,13 +238,13 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-Paywit-Secret-Key",
-        "description": "Server-to-server key, `sk_live_...`. Generate it in the dashboard under your app. Never ship it to a browser or mobile app."
+        "description": "Server-to-server key, `sk_test_...` on sandbox and `sk_live_...` on production. Generate it in the dashboard under your app. Never ship it to a browser or mobile app."
       },
       "PublishableKey": {
         "type": "apiKey",
         "in": "header",
         "name": "X-Paywit-Publishable-Key",
-        "description": "Client-side key, `pk_live_...`. Safe to embed in a web page. Can only create payments."
+        "description": "Client-side key, `pk_test_...` on sandbox and `pk_live_...` on production. Safe to embed in a web page. Can only create payments."
       }
     },
     "schemas": {

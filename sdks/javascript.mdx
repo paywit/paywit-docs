@@ -18,7 +18,7 @@ Both use the **publishable key** and so set the amount client-side. That is fine
 <script src="https://unpkg.com/@paywit/js@0.1.0"></script>
 
 <paywit-button
-  publishable-key="pk_live_..."
+  publishable-key="pk_test_..."
   api-base-url="https://api.sandbox.paywit.xyz"
   amount="10"
   description="Order #1234"
@@ -62,7 +62,7 @@ npm install @paywit/sdk
 import { Paywit, PaywitError } from "@paywit/sdk";
 
 const paywit = new Paywit({
-  publishableKey: "pk_live_...",
+  publishableKey: "pk_test_...",
   apiBaseUrl: "https://api.sandbox.paywit.xyz",
 });
 

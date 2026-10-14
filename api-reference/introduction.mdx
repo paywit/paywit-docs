@@ -19,8 +19,10 @@ Send one of two header keys. Both are generated per app in the dashboard.
 
 | Header | Key | Use it from |
 | --- | --- | --- |
-| `X-Paywit-Secret-Key` | `sk_live_...` | Your server. Full access to create payments. Never ship it to a client. |
-| `X-Paywit-Publishable-Key` | `pk_live_...` | A web page or app. Can only create payments, and the amount is then set client-side. |
+| `X-Paywit-Secret-Key` | `sk_test_...` on sandbox, `sk_live_...` on production | Your server. Full access to create payments. Never ship it to a client. |
+| `X-Paywit-Publishable-Key` | `pk_test_...` on sandbox, `pk_live_...` on production | A web page or app. Can only create payments, and the amount is then set client-side. |
+
+Test keys only work on sandbox and live keys only on production. A key used in the wrong environment is rejected with 401.
 
 Reading a payment by id needs no key. Webhooks are authenticated the other way round, with a signature you verify. See the [webhooks guide](/guides/webhooks).
 

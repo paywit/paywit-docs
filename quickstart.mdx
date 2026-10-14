@@ -18,7 +18,7 @@ Sign in to the [sandbox dashboard](https://dashboard.sandbox.paywit.xyz) with yo
     On the app page, set the settlement wallet. Payments on this app now settle there.
   </Step>
   <Step title="Generate a secret key">
-    On the app page, under **Secret keys**, generate one. It is shown once. It looks like `sk_live_...`.
+    On the app page, under **Secret keys**, generate one. It is shown once. On sandbox it starts with `sk_test_`.
   </Step>
 </Steps>
 
@@ -30,7 +30,7 @@ The secret key is for your server only. Never put it in a web page or mobile app
 
 ```bash
 curl https://api.sandbox.paywit.xyz/v1/payments \
-  -H "X-Paywit-Secret-Key: sk_live_..." \
+  -H "X-Paywit-Secret-Key: sk_test_..." \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 1,
